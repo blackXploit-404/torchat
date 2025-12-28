@@ -1,0 +1,4 @@
+
+cryptography>=3.4.8
+PySocks>=1.7.1
+qrcode>=7.3.1

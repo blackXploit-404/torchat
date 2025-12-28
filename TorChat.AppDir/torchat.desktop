@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=TorChat
+Comment=Anonymous P2P Chat over Tor
+Exec=TorChat
+Icon=icon
+Terminal=true
+Categories=Network;Security;
