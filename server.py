@@ -10,7 +10,8 @@ import tempfile
 import subprocess
 import argparse
 import sys
-
+from crypto import receive_packet , send_packet
+from version import VERSION
 # checks crypto file exits or not 
 try:
     from crypto import derive_key, encrypt, decrypt
@@ -20,7 +21,7 @@ except ImportError:
 
 def show_banner():
     """Display TorChat branded banner"""
-    banner = """
+    banner = f"""
 ╔══════════════════════════════════════════════════════════════╗
 ║  ████████╗ ██████╗ ██████╗  ██████╗██╗  ██╗ █████╗ ████████╗ ║
 ║  ╚══██╔══╝██╔═══██╗██╔══██╗██╔════╝██║  ██║██╔══██╗╚══██╔══╝ ║
@@ -33,8 +34,9 @@ def show_banner():
 ║              End-to-End Encrypted • Ephemeral                ║
 ║                                                              ║
 ║                    SERVER MODE (HOST)                        ║
-║                        v1.0.0                                ║
-╚══════════════════════════════════════════════════════════════╝
+║                                                              ║ 
+╚══════════════════════════════════════════════════════════════╝     
+                         v{VERSION}  
 
     🔒 ChaCha20-Poly1305 Encryption
     🧅 Tor Hidden Service  
@@ -46,10 +48,12 @@ def show_banner():
 
 
 show_banner()
+# added username feature
+set_username = input("Enter your Host username: ").strip() or "Host"
 
 parser = argparse.ArgumentParser(description='TorChat Server - Anonymous P2P Chat')
 parser.add_argument("--port", type=int, default=5000, help="Port to bind (default: 5000)")
-parser.add_argument("--version", action="version", version="TorChat v1.0.0")
+parser.add_argument("--version", action="version", version=f"TorChat v{VERSION}")
 args = parser.parse_args()
 
 PASSWORD = "shared-secret"
@@ -121,10 +125,12 @@ invite_token = base64.urlsafe_b64encode(token_bytes).decode().rstrip("=")
 invite_expiry = int(time.time()) + 300
 invite_url = f"chat://{onion_address}?token={invite_token}"
 
+# updated as per client logic 
 print("\n" + "="*50)
-print("[+] ONION ADDRESS READY")
+print("[+] ONION ADDRESS GENERATED")
 print(f"Invite URL: {invite_url}")
-print(f"Expires at: {time.strftime('%H:%M:%S', time.localtime(invite_expiry))}")
+print("\n IMPORTANT: Wait about 30 seconds before sending this link.")
+print("The Tor network needs time to publish your address.")
 print("="*50 + "\n")
 
 try:
@@ -152,32 +158,68 @@ print("[+] Waiting for peer through Tor...")
 conn, addr = s.accept()
 print(f"[+] Peer Connected via Tor circuit")
 
-# token validation
-def normalize_b64(token):
-    return base64.urlsafe_b64encode(base64.urlsafe_b64decode(token + "=" * (-len(token) % 4))).decode().rstrip("=")
 
+# =================================================================
+# previous logic 
+# =================================================================
+# def normalize_b64(token):
+#     return base64.urlsafe_b64encode(base64.urlsafe_b64decode(token + "=" * (-len(token) % 4))).decode().rstrip("=")
+#
+# try:
+#     token_msg = conn.recv(4096)
+#     client_token = decrypt(KEY, token_msg).decode()
+#     
+#     if normalize_b64(client_token) != invite_token:
+#         print("[-] Invalid token. Security breach attempt?")
+#         conn.close()
+#         sys.exit(1)
+#
+#     if int(time.time()) > invite_expiry:
+#         print("[-] Invite expired.")
+#         conn.close()
+#         sys.exit(1)
+#
+#     print("[+] Identity Verified. Chat session encrypted.\n")
+# except Exception as e:
+#     print(f"[-] Validation failed: {e}")
+#     conn.close()
+#     sys.exit(1)
+# =================================================================
+# new logic as per crypto.py
+# --- NEW v1.1.0 TOKEN & IDENTITY VALIDATION ---
 try:
-    token_msg = conn.recv(4096)
-    client_token = decrypt(KEY, token_msg).decode()
+   
+    packet = receive_packet(conn, KEY)
     
-    if normalize_b64(client_token) != invite_token:
-        print("[-] Invalid token. Security breach attempt?")
+    if not packet or packet.get("type") != "auth":
+        print("[-] Security break: Invalid handshake format.")
+        conn.close()
+        sys.exit(1)
+
+    client_token = packet.get("content")
+    peer_name = packet.get("user", "Peer")
+
+    # Simple string comparison (Base64 is preserved in JSON strings)
+    if client_token != invite_token:
+        print(f"[-] Invalid token provided by {peer_name}. Denied.")
         conn.close()
         sys.exit(1)
 
     if int(time.time()) > invite_expiry:
-        print("[-] Invite expired.")
+        print("[-] Invite has expired.")
         conn.close()
         sys.exit(1)
 
-    print("[+] Identity Verified. Chat session encrypted.\n")
+    print(f"[+] Identity Verified. Peer: {peer_name}")
+    print("[+] E2EE Active.\n")
+
 except Exception as e:
     print(f"[-] Validation failed: {e}")
     conn.close()
     sys.exit(1)
 
 # added full duplex 
-def receive_loop():
+'''def receive_loop():
     while True:
         try:
             data = conn.recv(4096)
@@ -188,17 +230,37 @@ def receive_loop():
             print(f"\rPeer: {decrypted_msg}\nYou: ", end="", flush=True)
         except Exception:
             break
+'''
+# new logic as per crypto.py
+def receive_loop():
+    while True:
+        try:
+            # receive_packet handles the decryption and decoding 
+            packet = receive_packet(conn, KEY)
+            if not packet:
+                print("\n[!] Peer disconnected.")
+                break
+            
+            sender = packet.get("user")
+            content = packet.get("content")
 
+            
+            print(f"\r{sender}: {content}\nYou: ", end="", flush=True)
+        except Exception:
+            break
+#
 def send_loop():
     while True:
         try:
             msg = input("You: ")
             if msg.lower() in ['/quit', '/exit']:
+                send_packet(conn, "status", set_username, "has left the chat.", KEY)
                 break
-            conn.send(encrypt(KEY, msg.encode()))
+            if msg:
+                # it wraps your message in a JSON packet and send
+                send_packet(conn, "msg", set_username, msg, KEY)
         except Exception:
             break
-
 recv_thread = threading.Thread(target=receive_loop, daemon=True)
 send_thread = threading.Thread(target=send_loop)
 recv_thread.start()

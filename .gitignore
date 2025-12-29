@@ -23,3 +23,6 @@ addr.txt
 
 .vscode/
 .DS_Store
+
+bump.py
+

@@ -3,12 +3,14 @@ import socks
 import base64
 import threading
 import sys
+import time
 from urllib.parse import urlparse, parse_qs
 from crypto import derive_key, encrypt, decrypt
-
+from version import VERSION
+from crypto import send_packet, receive_packet # added import for packet functions
 def show_banner():
     """Display TorChat branded banner for client"""
-    banner = """
+    banner = f"""
 ╔══════════════════════════════════════════════════════════════╗
 ║  ████████╗ ██████╗ ██████╗  ██████╗██╗  ██╗ █████╗ ████████╗ ║
 ║  ╚══██╔══╝██╔═══██╗██╔══██╗██╔════╝██║  ██║██╔══██╗╚══██╔══╝ ║
@@ -21,9 +23,9 @@ def show_banner():
 ║              End-to-End Encrypted • Ephemeral                ║
 ║                                                              ║
 ║                   CLIENT MODE (JOIN)                         ║
-║                        v1.0.0                                ║
+║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
-
+                         v{VERSION}  
     🔗 Connecting via System Tor
     🎫 One-Time Invite Required
     🔒 ChaCha20-Poly1305 Decryption
@@ -43,6 +45,10 @@ def normalize_base64(token):
 
 
 show_banner()
+
+
+# username added 
+set_username = input("choose a cool username: ").strip() or "Anonymous"
 
 # invite
 invite_url = input("Paste one-time invite: ").strip()
@@ -69,38 +75,66 @@ ONION_PORT = 5000
 PASSWORD = "shared-secret"
 KEY = derive_key(PASSWORD)
 
-
+# added better connection handling with retries
 s = socks.socksocket()
-try:
-    print(f"[*] Routing through Tor proxy {PROXY_HOST}:{PROXY_PORT}...")
-    s.set_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT)
-    
-    print(f"[*] Resolving and connecting to {onion_address}...")
-    s.connect((onion_address, ONION_PORT))
-    print("[+] Connected to peer over Tor circuit.")
-except Exception as e:
-    print(f"[-] Connection failed: {e}")
-    print("[!] Is your local Tor service running? (sudo systemctl start tor)")
+s.set_proxy(socks.SOCKS5, PROXY_HOST, PROXY_PORT)
+
+MAX_RETRIES = 12   # 12 tries * 10 seconds = 2 minutes total wait time
+RETRY_DELAY = 10   # Seconds between attempts
+
+connected = False
+
+print(f"[*] Routing through Tor proxy {PROXY_HOST}:{PROXY_PORT}...")
+print(f"[*] Target: {onion_address}")
+
+for attempt in range(1, MAX_RETRIES + 1):
+    try:
+        print(f"[*] Connection attempt {attempt}/{MAX_RETRIES}...", end="\r")
+        s.connect((onion_address, ONION_PORT))
+        print(f"\n[+] Connected to peer over Tor circuit on attempt {attempt}!")
+        connected = True
+        break
+    except Exception:
+        if attempt < MAX_RETRIES:
+            
+            time.sleep(RETRY_DELAY)
+        else:
+            print(f"\n[-] Connection failed after {MAX_RETRIES} attempts.")
+            print("[!] Possible reasons: Host is offline, Invite expired, or Tor is very slow today.")
+            sys.exit(1)
+
+if not connected:
     sys.exit(1)
+# updated handshake with new packet format
 
 # invite token
 try:
-    s.send(encrypt(KEY, normalized_token.encode()))
+    send_packet(s, "auth", set_username, normalized_token, KEY)
+    #s.send(encrypt(KEY, normalized_token.encode()))
 except Exception as e:
     print(f"[-] Failed to send invite token: {e}")
     s.close()
     sys.exit(1)
 
-# added full duplex 
+# added full duplex [ logic to handle JSON ]
 def receive_loop():
     while True:
         try:
-            data = s.recv(4096)
-            if not data:
+            packet = receive_packet(s, KEY)
+            if packet is None:
                 print("\n[-] Connection closed by peer.")
                 break
-            msg = decrypt(KEY, data).decode()
-            print(f"\rPeer: {msg}\nYou: ", end="", flush=True)
+           # extract from json packet 
+            sender = packet.get("user", "Unknown")
+            content = packet.get("content", "")
+            p_type = packet.get("type", "msg")
+
+            if p_type == "msg":
+                print(f"\r{sender}: {content}\nYou: ", end="", flush=True)
+            elif p_type == "status":
+                # This is where 'typing' or 'joined' alerts appear
+                print(f"\r[*] {sender} {content}", end="", flush=True)
+                
         except Exception:
             break
 
@@ -109,7 +143,10 @@ def send_loop():
         try:
             msg = input("You: ")
             if msg:
-                s.send(encrypt(KEY, msg.encode()))
+                if msg.lower() in ['/quit', '/exit']:
+                    break
+                # use new send packet fuct
+                send_packet(s, "msg", set_username, msg, KEY)
         except Exception:
             break
 

@@ -1,14 +1,23 @@
-![logo](./demo/logo.png)
-
-![demo](./demo/finaldemo.png)
-
-![demo](./demo/torchatdemo3.png)
-
 # TorChat - Anonymous P2P Chat
 
-**Secure, private, and anonymous peer-to-peer chat over the Tor network**
+<p align="center">
+  <img src="./demo/torchat1.1.0.png" alt="TorChat Demo" width="500">
+</p>
+<p align="center">
+  <img src="./demo/demo.gif" alt="TorChat Demo" width="500">
+</p>
 
-# Basically 
+
+**Secure, private, and anonymous peer-to-peer chat over the Tor network.**
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Version-1.1.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
+  <img src="https://img.shields.io/badge/Security-ChaCha20--Poly1305-orange.svg" alt="Security">
+  <img src="https://img.shields.io/badge/Network-Tor-800080.svg" alt="Tor">
+
+## What is TorChat?
+
 ### its a lightweight, privacy-first messaging tool that lets you communicate directly with others over the Tor network—without any central servers. It's designed for those who care deeply about privacy, security, and simplicity.
 
 ## What Makes TorChat Special
@@ -360,6 +369,17 @@ SocksPort 9050
 
 
 ```
+## Troubleshooting Section
+
+    "Address not found": added remind users to wait 30–60 seconds for the Tor network to publish the new .onion descriptor.
+
+    "Connection timed out": Suggest checking the Tor service status and network connectivity.
+   
+   ```
+   sudo systemctl status tor
+
+   ```
+
 
 ### Initial Plan 
 now it has more features than this
@@ -381,3 +401,4 @@ Want to make TorChat better? Contributions are welcome!
 - Feel free to fork and remix the project
 
 ## Enjoy Anonymous Chatting!
+

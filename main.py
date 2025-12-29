@@ -3,7 +3,7 @@ import subprocess
 import socket
 import sys
 import os
-
+from version import VERSION
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PYTHON = sys.executable
@@ -23,7 +23,8 @@ def check_system_tor():
         return False
 
 def show_main_banner():
-    banner = """
+    
+    banner = f"""
 ╔══════════════════════════════════════════════════════════════╗
 ║  ████████╗ ██████╗ ██████╗  ██████╗██╗  ██╗ █████╗ ████████╗ ║
 ║  ╚══██╔══╝██╔═══██╗██╔══██╗██╔════╝██║  ██║██╔══██╗╚══██╔══╝ ║
@@ -35,17 +36,16 @@ def show_main_banner():
 ║           Anonymous P2P Chat over Tor Network                ║
 ║              End-to-End Encrypted • Ephemeral                ║
 ║                                                              ║
-║                   AppImage Edition v1.0.0                    ║
+║                    AppImage Edition                          ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
-
+                        v{VERSION}
         🔒 Secure • 🧅 Anonymous • ⚡ Fast • 🎫 Ephemeral
 
     [1] Host chat (Server)  - Create new chat room
     [2] Connect to peer (Client) - Join existing chat
 """
     print(banner)
-
 show_main_banner()
 choice = input("Choose [1/2]: ").strip()
 
