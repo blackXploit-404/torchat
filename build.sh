@@ -39,7 +39,7 @@ cp main.py   "${APPDIR}/usr/bin/"
 cp server.py "${APPDIR}/usr/bin/"
 cp client.py "${APPDIR}/usr/bin/"
 cp crypto.py "${APPDIR}/usr/bin/"
-
+cp version.py "${APPDIR}/usr/bin/"
 chmod +x "${APPDIR}/usr/bin/"*.py
 
 echo "Source files synced."
