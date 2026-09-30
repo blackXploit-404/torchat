@@ -11,7 +11,7 @@
 **Secure, private, and anonymous peer-to-peer chat over the Tor network.**
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-1.1.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-1.2.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/Security-ChaCha20--Poly1305-orange.svg" alt="Security">
   <img src="https://img.shields.io/badge/Network-Tor-800080.svg" alt="Tor">
@@ -47,11 +47,13 @@ https://protonvpn.com/blog/chacha20
 
 - **Automatic Setup**: You don't need to be a network expert. The server handles the Tor handshake and creates the secret .onion address for you automatically.
 
-- **Self-Destructing Invites**: Invitations come with a built-in timer. The link only works for 10 minutes; if no one joins by then, the "door" locks for good.
+- **Invite Links**: The host gets a link containing a random 32-byte room secret. Anyone holding the link can join, up to 16 peers. The link stops working the moment the host quits and the onion address is deleted.
 
 - **QR Code Sharing**: Instead of typing a 56-character onion address (which is easy to mess up), the host can just show a QR code for the guest to scan.
 
-- **Two-Way Talk( full-dumplex mode)**: Using Python threads, both people can type and receive messages at the same time without waiting for the other person to finish.
+- **Group Rooms**: Up to 16 people in one room. The host relays every message to everyone else, and people can type and receive at the same time without waiting for anyone else to finish.
+
+- **Reliable Delivery**: Messages are length-prefixed before encryption, so a message is reassembled correctly no matter how the network splits it into pieces.
 
 - **Total Erasure**: This tool is ephemeral. This means it leaves no footprints. There are no logs, no history, and no saved files. Once you close the chat, the address and the messages vanish as if they never existed.
 
@@ -71,7 +73,7 @@ TorChat uses a Tor architecture, for the best user experience:
 
 ./TorChat-x86_64.AppImage
 
-# Choose: [1] Host chat (Server)
+# Choose: [1] Host room (Server)
 
 ```
 
@@ -91,7 +93,7 @@ TorChat uses a Tor architecture, for the best user experience:
 
 ./TorChat-x86_64.AppImage
 
-# Choose: [2] Connect to peer (Client)
+# Choose: [2] Join room (Client)
 
 ```
 
@@ -115,7 +117,7 @@ is what you should type to start tor.
 
 ./TorChat-x86_64.AppImage
 
-# Choose: [2] Connect to peer (Client)
+# Choose: [2] Join room (Client)
 
 ```
 
@@ -131,6 +133,8 @@ chmod +x TorChat-x86_64.AppImage
 
 # Share the invite URL/QR code
 
+# Type /invite any time to print it again
+
 ```
 
 **Person 2 (Join):**
@@ -142,6 +146,8 @@ chmod +x TorChat-x86_64.AppImage
 ./TorChat-x86_64.AppImage  # Choose [2] Client
 
 # Paste the invite URL
+
+# Repeat for as many people as you want in the room
 
 ```
 

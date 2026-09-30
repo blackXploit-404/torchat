@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
-import subprocess
-import socket
-import sys
 import os
+import socket
+import subprocess
+import sys
+
 from version import VERSION
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PYTHON = sys.executable
-
 SERVER = os.path.join(BASE_DIR, "server.py")
 CLIENT = os.path.join(BASE_DIR, "client.py")
 
-def check_system_tor():
-    """Check if system Tor SOCKS proxy is available"""
+
+def system_tor_available():
     try:
         sock = socket.socket()
         sock.settimeout(2)
         sock.connect(("127.0.0.1", 9050))
         sock.close()
         return True
-    except Exception:
+    except OSError:
         return False
 
-def show_main_banner():
-    
-    banner = f"""
+
+def main():
+    print(
+        f"""
 ╔══════════════════════════════════════════════════════════════╗
 ║  ████████╗ ██████╗ ██████╗  ██████╗██╗  ██╗ █████╗ ████████╗ ║
 ║  ╚══██╔══╝██╔═══██╗██╔══██╗██╔════╝██║  ██║██╔══██╗╚══██╔══╝ ║
@@ -39,24 +40,26 @@ def show_main_banner():
 ║                    AppImage Edition                          ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
-                        v{VERSION}
-        🔒 Secure • 🧅 Anonymous • ⚡ Fast • 🎫 Ephemeral
+                         v{VERSION}
+         🔒 Secure • 🧅 Anonymous • ⚡ Fast • 🎫 Ephemeral
 
-    [1] Host chat (Server)  - Create new chat room
-    [2] Connect to peer (Client) - Join existing chat
+    [1] Host room (Server)  - Create a group chat
+    [2] Join room (Client)  - Connect to an existing room
 """
-    print(banner)
-show_main_banner()
-choice = input("Choose [1/2]: ").strip()
+    )
+    choice = input("Choose [1/2]: ").strip()
 
-if choice == "1":
-    print("\n🚀 Starting server mode (using embedded Tor)...")
-    subprocess.run([PYTHON, SERVER], cwd=BASE_DIR)
+    if choice == "1":
+        print("\n🚀 Starting room host (using embedded Tor)...")
+        subprocess.run([PYTHON, SERVER], cwd=BASE_DIR)
+        return
 
-elif choice == "2":
+    if choice != "2":
+        print("Invalid choice.")
+        return
+
     print("\n🔗 Starting client mode...")
-
-    if not check_system_tor():
+    if not system_tor_available():
         print("❌ System Tor not detected on port 9050")
         print("\n💡 Client mode requires system Tor.")
         print("   sudo systemctl start tor")
@@ -66,5 +69,6 @@ elif choice == "2":
     print("✅ System Tor detected - proceeding with client...")
     subprocess.run([PYTHON, CLIENT], cwd=BASE_DIR)
 
-else:
-    print("❌ Invalid choice.")
+
+if __name__ == "__main__":
+    main()
